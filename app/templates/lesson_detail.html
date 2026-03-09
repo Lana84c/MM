@@ -32,6 +32,17 @@
     </div>
 
     <div class="auth-card">
+        {% if conversation %}
+            <div class="coach-chat">
+                {% for msg in conversation %}
+                    <div class="coach-message {{ msg.role }}">
+                        <strong>{{ msg.role|title }}:</strong>
+                        <p>{{ msg.content }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         {% if current_user and enrolled %}
             <form method="post" action="/lessons/{{ lesson.slug }}/coach" class="auth-form">
                 <label for="coach_prompt">Ask the AI Coach a question</label>
@@ -55,3 +66,4 @@
         {% endif %}
     </div>
 </section>
+{% endblock %}

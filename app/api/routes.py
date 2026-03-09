@@ -10,6 +10,11 @@ from app.models.course import Course
 from app.models.user import User
 from app.services.ai_coach import get_lesson_coaching_response
 from app.services.auth_service import authenticate_user
+from app.services.coach_memory_service import (
+    get_lesson_conversation,
+    save_ai_message,
+    save_user_message,
+)
 from app.services.course_service import (
     enroll_user_in_course,
     get_completed_lesson_ids_for_course,
@@ -164,10 +169,14 @@ async def course_detail(
 
     enrolled = current_user is not None and is_user_enrolled_in_course(db, current_user, course)
     completed_lesson_ids = (
-        get_completed_lesson_ids_for_course(db, current_user, course) if current_user and enrolled else set()
+        get_completed_lesson_ids_for_course(db, current_user, course)
+        if current_user and enrolled
+        else set()
     )
     progress_percent = (
-        get_course_progress_percent(db, current_user, course) if current_user and enrolled else 0
+        get_course_progress_percent(db, current_user, course)
+        if current_user and enrolled
+        else 0
     )
 
     lessons = sorted(course.lessons, key=lambda lesson: lesson.sort_order)
@@ -212,6 +221,10 @@ async def lesson_detail(
     enrolled = current_user is not None and is_user_enrolled_in_course(db, current_user, course)
     completed = current_user is not None and enrolled and is_lesson_complete(db, current_user, lesson)
 
+    conversation = []
+    if current_user:
+        conversation = get_lesson_conversation(db, current_user.id, lesson.id)
+
     return templates.TemplateResponse(
         "lesson_detail.html",
         {
@@ -224,6 +237,7 @@ async def lesson_detail(
             "completed": completed,
             "coach_response": None,
             "coach_prompt": "",
+            "conversation": conversation,
         },
     )
 
@@ -254,15 +268,37 @@ async def lesson_coach(
     enrolled = current_user is not None and is_user_enrolled_in_course(db, current_user, course)
     completed = current_user is not None and enrolled and is_lesson_complete(db, current_user, lesson)
 
-    coach_response = None
     cleaned_prompt = coach_prompt.strip()
+    conversation = []
+    coach_response = None
 
     if current_user and enrolled and cleaned_prompt:
+        history = get_lesson_conversation(db, current_user.id, lesson.id)
+
+        save_user_message(
+            db=db,
+            user_id=current_user.id,
+            lesson_id=lesson.id,
+            content=cleaned_prompt,
+        )
+
         coach_response = get_lesson_coaching_response(
             lesson_title=lesson.title,
             lesson_content=lesson.content,
             user_message=cleaned_prompt,
+            history=history,
         )
+
+        save_ai_message(
+            db=db,
+            user_id=current_user.id,
+            lesson_id=lesson.id,
+            content=coach_response.answer,
+        )
+
+        conversation = get_lesson_conversation(db, current_user.id, lesson.id)
+    elif current_user:
+        conversation = get_lesson_conversation(db, current_user.id, lesson.id)
 
     return templates.TemplateResponse(
         "lesson_detail.html",
@@ -275,7 +311,8 @@ async def lesson_coach(
             "enrolled": enrolled,
             "completed": completed,
             "coach_response": coach_response,
-            "coach_prompt": cleaned_prompt,
+            "coach_prompt": "",
+            "conversation": conversation,
         },
     )
 

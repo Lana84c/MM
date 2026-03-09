@@ -72,10 +72,28 @@ Response style:
 """.strip()
 
 
+def build_history_messages(history) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+
+    if not history:
+        return messages
+
+    for msg in history:
+        messages.append(
+            {
+                "role": msg.role,
+                "content": msg.content,
+            }
+        )
+
+    return messages
+
+
 def get_lesson_coaching_response(
     lesson_title: str,
     lesson_content: str,
     user_message: str,
+    history=None,
 ) -> AICoachResponse:
     if not settings.openai_api_key:
         return build_fallback_response(
@@ -97,12 +115,22 @@ Learner question:
 {user_message}
 """.strip()
 
+        messages = [
+            {"role": "system", "content": build_system_prompt()},
+        ]
+
+        messages += build_history_messages(history)
+
+        messages.append(
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        )
+
         response = client.responses.create(
             model=settings.openai_model,
-            input=[
-                {"role": "system", "content": build_system_prompt()},
-                {"role": "user", "content": prompt},
-            ],
+            input=messages,
         )
 
         answer = getattr(response, "output_text", "").strip()

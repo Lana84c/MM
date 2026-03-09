@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# virtual env
+.venv/
+
+# environment
+.env
+
+# local database
+mm.db
+
+# OS
+.DS_Store
