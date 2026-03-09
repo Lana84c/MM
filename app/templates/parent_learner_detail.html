@@ -28,6 +28,34 @@
 
 <section class="catalog">
     <div class="section-heading">
+        <p class="eyebrow">Parent Summary</p>
+        <h2>Quick overview</h2>
+    </div>
+
+    <div class="auth-card">
+        <p class="lead">{{ summary.parent_summary }}</p>
+
+        {% if summary.low_engagement_flag %}
+        <div class="alert error">
+            {{ summary.low_engagement_flag }}
+        </div>
+        {% endif %}
+
+        {% if summary.recommendation %}
+        <div class="info-card" style="margin-top: 1rem;">
+            <h3>Recommended Next Lesson</h3>
+            <p><strong>Course:</strong> {{ summary.recommendation.course_title }}</p>
+            <p><strong>Lesson:</strong> {{ summary.recommendation.lesson_title }}</p>
+            <a class="button primary" href="/lessons/{{ summary.recommendation.lesson_slug }}">
+                Open Recommended Lesson
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
         <p class="eyebrow">Courses</p>
         <h2>Current enrollments</h2>
     </div>
