@@ -1,0 +1,99 @@
+:root {
+    --navy: #1f3b5c;
+    --teal: #2fa4a9;
+    --charcoal: #333333;
+    --gold: #f2b705;
+    --white: #ffffff;
+    --bg: #f6f8fb;
+    --border: #d9e2ec;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    color: var(--charcoal);
+    background: var(--bg);
+}
+
+.container {
+    width: min(1100px, calc(100% - 2rem));
+    margin: 0 auto;
+}
+
+.site-header {
+    background: var(--navy);
+    color: var(--white);
+    border-bottom: 4px solid var(--teal);
+}
+
+.site-header .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+}
+
+.brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.nav a {
+    color: var(--white);
+    text-decoration: none;
+    margin-left: 1rem;
+    font-weight: 600;
+}
+
+.hero {
+    padding: 4rem 0;
+}
+
+.hero-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(31, 59, 92, 0.08);
+}
+
+.eyebrow {
+    color: var(--teal);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+h1 {
+    color: var(--navy);
+    margin-bottom: 0.75rem;
+}
+
+.lead {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 700px;
+}
+
+.actions {
+    margin-top: 1.5rem;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.8rem 1.1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.button.primary {
+    background: var(--teal);
+    color: var(--white);
+}
