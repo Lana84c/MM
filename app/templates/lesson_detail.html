@@ -31,38 +31,68 @@
         <h2>Practice this lesson in real life</h2>
     </div>
 
-    <div class="auth-card">
-        {% if conversation %}
-            <div class="coach-chat">
-                {% for msg in conversation %}
-                    <div class="coach-message {{ msg.role }}">
-                        <strong>{{ msg.role|title }}:</strong>
-                        <p>{{ msg.content }}</p>
-                    </div>
-                {% endfor %}
+    <div class="chat-shell">
+        <div class="chat-header">
+            <div>
+                <h3>MM AI Coach</h3>
+                <p>Lesson-aware coaching with saved conversation history</p>
             </div>
-        {% endif %}
+        </div>
 
-        {% if current_user and enrolled %}
-            <form method="post" action="/lessons/{{ lesson.slug }}/coach" class="auth-form">
-                <label for="coach_prompt">Ask the AI Coach a question</label>
-                <textarea id="coach_prompt" name="coach_prompt" rows="5" required>{{ coach_prompt }}</textarea>
-                <button type="submit" class="button primary">Ask AI Coach</button>
-            </form>
+        <div class="chat-body">
+            {% if current_user and enrolled %}
+                {% if conversation %}
+                    {% for msg in conversation %}
+                        <div class="chat-row {% if msg.role == 'user' %}user{% else %}assistant{% endif %}">
+                            <div class="chat-bubble {% if msg.role == 'user' %}user{% else %}assistant{% endif %}">
+                                <div class="chat-role">
+                                    {% if msg.role == "user" %}
+                                        You
+                                    {% else %}
+                                        AI Coach
+                                    {% endif %}
+                                </div>
+                                <div class="chat-text">{{ msg.content }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-chat-state">
+                        <p>No messages yet. Ask the AI Coach a question to start practicing this lesson.</p>
+                    </div>
+                {% endif %}
 
-            {% if coach_response %}
-                <div class="coach-response">
-                    <h3>AI Coach Response</h3>
-
-                    {% if coach_response.used_fallback %}
-                        <p class="note-text">Local fallback response was used.</p>
-                    {% endif %}
-
-                    <pre>{{ coach_response.answer }}</pre>
+                {% if coach_response and (not conversation or conversation[-1].role != 'assistant') %}
+                    <div class="chat-row assistant">
+                        <div class="chat-bubble assistant">
+                            <div class="chat-role">AI Coach</div>
+                            <div class="chat-text">{{ coach_response.answer }}</div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-chat-state">
+                    <p>Enroll in this course to use the AI Coach for lesson support.</p>
                 </div>
             {% endif %}
-        {% else %}
-            <p class="lead">Enroll in this course to use the AI Coach for lesson support.</p>
+        </div>
+
+        {% if current_user and enrolled %}
+            <div class="chat-footer">
+                <form method="post" action="/lessons/{{ lesson.slug }}/coach" class="chat-form">
+                    <label for="coach_prompt" class="sr-only">Ask the AI Coach a question</label>
+                    <textarea
+                        id="coach_prompt"
+                        name="coach_prompt"
+                        rows="3"
+                        placeholder="Ask a question, practice a scenario, or request a polite response..."
+                        required
+                    >{{ coach_prompt }}</textarea>
+                    <div class="chat-actions">
+                        <button type="submit" class="button primary">Send</button>
+                    </div>
+                </form>
+            </div>
         {% endif %}
     </div>
 </section>
