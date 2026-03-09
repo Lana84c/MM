@@ -1,24 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <section class="hero">
     <div class="hero-card">
         <p class="eyebrow">Admin</p>
         <h1>Platform Analytics</h1>
-        <p class="lead">Overview of platform activity.</p>
+        <p class="lead">Platform usage, learning activity, and AI engagement.</p>
     </div>
 </section>
 
 <section class="catalog">
-
     <div class="section-heading">
-        <p class="eyebrow">Statistics</p>
-        <h2>Platform Overview</h2>
+        <p class="eyebrow">Platform Stats</p>
+        <h2>Overview</h2>
     </div>
 
     <div class="info-grid">
-
         <div class="info-card">
             <h3>Total Users</h3>
             <p>{{ stats.total_users }}</p>
@@ -44,8 +41,124 @@
             <p>{{ stats.completed_lessons }}</p>
         </div>
 
+        <div class="info-card">
+            <h3>Practice Sessions</h3>
+            <p>{{ stats.practice_sessions }}</p>
+        </div>
     </div>
-
 </section>
 
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Courses</p>
+        <h2>Course Enrollments</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Course</th>
+            <th>Enrollments</th>
+        </tr>
+        {% for c in course_stats %}
+        <tr>
+            <td>{{ c.course }}</td>
+            <td>{{ c.enrollments }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Lessons</p>
+        <h2>Lesson Completions</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Lesson</th>
+            <th>Completions</th>
+        </tr>
+        {% for l in lesson_stats %}
+        <tr>
+            <td>{{ l.lesson }}</td>
+            <td>{{ l.completions }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">AI Coach</p>
+        <h2>Top Learner Questions</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Question</th>
+            <th>Times Asked</th>
+        </tr>
+        {% for q in top_questions %}
+        <tr>
+            <td>{{ q.question }}</td>
+            <td>{{ q.count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No AI coach questions recorded yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Struggle Detection</p>
+        <h2>Lessons with Low Completion</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Lesson</th>
+            <th>Completed</th>
+            <th>Completion Rate</th>
+        </tr>
+        {% for row in lesson_struggles %}
+        <tr>
+            <td>{{ row.lesson }}</td>
+            <td>{{ row.completion_count }}</td>
+            <td>{{ row.completion_rate }}%</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No lesson completion data available yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Practice</p>
+        <h2>Scenario Usage</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Scenario</th>
+            <th>Sessions</th>
+        </tr>
+        {% for s in scenario_usage %}
+        <tr>
+            <td>{{ s.scenario }}</td>
+            <td>{{ s.session_count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No scenario usage data available yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
 {% endblock %}

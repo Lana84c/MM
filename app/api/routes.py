@@ -3,7 +3,16 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from app.services.analytics_service import get_platform_stats
+
+from app.services.analytics_service import (
+    get_course_enrollment_stats,
+    get_lesson_completion_stats,
+    get_lesson_struggle_stats,
+    get_platform_stats,
+    get_scenario_usage_stats,
+    get_top_coach_questions,
+)
+
 from app.core.deps import get_db
 from app.core.db import engine
 from app.models.course import Course
@@ -546,13 +555,17 @@ async def admin_analytics(
     request: Request,
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-
     current_user = get_current_user(request, db)
 
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
     stats = get_platform_stats(db)
+    course_stats = get_course_enrollment_stats(db)
+    lesson_stats = get_lesson_completion_stats(db)
+    top_questions = get_top_coach_questions(db)
+    lesson_struggles = get_lesson_struggle_stats(db)
+    scenario_usage = get_scenario_usage_stats(db)
 
     return templates.TemplateResponse(
         "admin_analytics.html",
@@ -561,5 +574,10 @@ async def admin_analytics(
             "page_title": "Platform Analytics | MM",
             "current_user": current_user,
             "stats": stats,
+            "course_stats": course_stats,
+            "lesson_stats": lesson_stats,
+            "top_questions": top_questions,
+            "lesson_struggles": lesson_struggles,
+            "scenario_usage": scenario_usage,
         },
     )
