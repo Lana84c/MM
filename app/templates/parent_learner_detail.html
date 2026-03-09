@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Learner Progress</p>
+        <h1>{{ summary.learner.full_name }}</h1>
+        <p class="lead">{{ summary.learner.email }}</p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Completed Lessons</h3>
+                <p>{{ summary.completed_lessons }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Practice Sessions</h3>
+                <p>{{ summary.practice_sessions }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Enrolled Courses</h3>
+                <p>{{ summary.enrolled_courses|length }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Courses</p>
+        <h2>Current enrollments</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for course in summary.enrolled_courses %}
+        <div class="info-card">
+            <h3>{{ course.title }}</h3>
+            <p>{{ course.description }}</p>
+            <p><strong>Difficulty:</strong> {{ course.difficulty|title }}</p>
+        </div>
+        {% else %}
+        <div class="info-card">
+            <h3>No courses yet</h3>
+            <p>This learner is not enrolled in any courses.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">AI Coach Activity</p>
+        <h2>Recent learner questions</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Question</th>
+            <th>When</th>
+        </tr>
+        {% for msg in summary.recent_questions %}
+        <tr>
+            <td>{{ msg.content }}</td>
+            <td>{{ msg.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No recent AI coach questions.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="actions" style="margin-top: 1rem;">
+        <a class="button secondary" href="/parent/dashboard">Back to Parent Dashboard</a>
+    </div>
+</section>
+{% endblock %}

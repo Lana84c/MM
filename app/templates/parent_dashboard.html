@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Parent / Guardian</p>
+        <h1>Parent Dashboard</h1>
+        <p class="lead">View learner progress, activity, and recent coaching usage.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Learners</p>
+        <h2>Select a learner</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for learner in learners %}
+        <div class="info-card">
+            <h3>{{ learner.full_name }}</h3>
+            <p>{{ learner.email }}</p>
+            <p><strong>Role:</strong> {{ learner.role|title }}</p>
+            <a class="button primary" href="/parent/learner/{{ learner.id }}">View Progress</a>
+        </div>
+        {% else %}
+        <div class="info-card">
+            <h3>No learners found</h3>
+            <p>Add learners to begin tracking progress.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

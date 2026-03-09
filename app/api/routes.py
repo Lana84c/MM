@@ -1,3 +1,5 @@
+from app.services.parent_service import get_all_learners, get_learner_summary
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -579,5 +581,60 @@ async def admin_analytics(
             "top_questions": top_questions,
             "lesson_struggles": lesson_struggles,
             "scenario_usage": scenario_usage,
+        },
+    )
+
+@router.get("/parent/dashboard", response_class=HTMLResponse)
+async def parent_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    learners = get_all_learners(db)
+
+    return templates.TemplateResponse(
+        "parent_dashboard.html",
+        {
+            "request": request,
+            "page_title": "Parent Dashboard | MM",
+            "current_user": current_user,
+            "learners": learners,
+        },
+    )
+
+
+@router.get("/parent/learner/{learner_id}", response_class=HTMLResponse)
+async def parent_learner_detail(
+    learner_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    summary = get_learner_summary(db, learner_id)
+    if not summary:
+        return templates.TemplateResponse(
+            "not_found.html",
+            {
+                "request": request,
+                "page_title": "Not Found | MM",
+                "current_user": current_user,
+                "message": "Learner not found.",
+            },
+            status_code=404,
+        )
+
+    return templates.TemplateResponse(
+        "parent_learner_detail.html",
+        {
+            "request": request,
+            "page_title": f"Learner Progress | {summary['learner'].full_name}",
+            "current_user": current_user,
+            "summary": summary,
         },
     )
