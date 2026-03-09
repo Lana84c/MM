@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Organization Admin</p>
+        <h1>Assign Course Enrollment</h1>
+        <p class="lead">
+            Enroll an organization user into one of this organization’s courses.
+        </p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="auth-card">
+        {% if org_users and org_courses %}
+            <form method="post" action="/org/enrollments/new" class="auth-form">
+                <label for="user_id">User</label>
+                <select id="user_id" name="user_id" required>
+                    {% for user in org_users %}
+                        <option value="{{ user.id }}">
+                            {{ user.full_name }} ({{ user.role|title }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label for="course_id">Course</label>
+                <select id="course_id" name="course_id" required>
+                    {% for course in org_courses %}
+                        <option value="{{ course.id }}">
+                            {{ course.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <div class="actions">
+                    <button type="submit" class="button primary">Assign Enrollment</button>
+                    <a class="button secondary" href="/org/dashboard">Cancel</a>
+                </div>
+            </form>
+        {% else %}
+            <div class="info-card">
+                <h3>Enrollment setup unavailable</h3>
+                {% if not org_users and not org_courses %}
+                    <p>This organization does not have any users or courses yet.</p>
+                {% elif not org_users %}
+                    <p>This organization does not have any users yet.</p>
+                {% else %}
+                    <p>This organization does not have any courses yet.</p>
+                {% endif %}
+            </div>
+
+            <div class="actions" style="margin-top: 1rem;">
+                <a class="button secondary" href="/org/dashboard">Back to Org Dashboard</a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

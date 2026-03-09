@@ -445,3 +445,11 @@ h1 {
 .table tr:last-child td {
     border-bottom: none;
 }
+
+.auth-form select {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    background: var(--white);
+}

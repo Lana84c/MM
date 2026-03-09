@@ -1,13 +1,14 @@
-from app.services.parent_service import get_all_learners, get_learner_summary
-
-from app.services.org_service import get_org_courses, get_org_users, get_user_organization
-
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.deps import get_db
+from app.core.db import engine
+from app.core.security import hash_password
+from app.models.user import User
+from app.services.ai_coach import get_lesson_coaching_response
 from app.services.analytics_service import (
     get_course_enrollment_stats,
     get_lesson_completion_stats,
@@ -16,12 +17,6 @@ from app.services.analytics_service import (
     get_scenario_usage_stats,
     get_top_coach_questions,
 )
-
-from app.core.deps import get_db
-from app.core.db import engine
-from app.models.course import Course
-from app.models.user import User
-from app.services.ai_coach import get_lesson_coaching_response
 from app.services.auth_service import authenticate_user
 from app.services.coach_memory_service import (
     get_lesson_conversation,
@@ -42,6 +37,15 @@ from app.services.course_service import (
     mark_lesson_complete,
 )
 from app.services.evaluation_service import evaluate_roleplay_session
+from app.services.org_service import (
+    create_org_user,
+    enroll_user_in_org_course,
+    get_org_courses,
+    get_org_users,
+    get_user_organization,
+    is_org_admin,
+)
+from app.services.parent_service import get_all_learners, get_learner_summary
 from app.services.roleplay_service import (
     get_roleplay_opening_response,
     get_roleplay_turn_response,
@@ -302,7 +306,12 @@ async def lesson_coach(
     if current_user and enrolled and cleaned_prompt:
         history = get_lesson_conversation(db, current_user.id, lesson.id)
 
-        save_user_message(db, current_user.id, lesson.id, cleaned_prompt)
+        save_user_message(
+            db=db,
+            user_id=current_user.id,
+            lesson_id=lesson.id,
+            content=cleaned_prompt,
+        )
 
         coach_response = get_lesson_coaching_response(
             lesson_title=lesson.title,
@@ -311,7 +320,13 @@ async def lesson_coach(
             history=history,
         )
 
-        save_ai_message(db, current_user.id, lesson.id, coach_response.answer)
+        save_ai_message(
+            db=db,
+            user_id=current_user.id,
+            lesson_id=lesson.id,
+            content=coach_response.answer,
+        )
+
         conversation = get_lesson_conversation(db, current_user.id, lesson.id)
     elif current_user:
         conversation = get_lesson_conversation(db, current_user.id, lesson.id)
@@ -429,7 +444,12 @@ async def start_practice(
         learner_objective=scenario.learner_objective,
     )
 
-    add_simulation_message(db, session.id, "assistant", opening.answer)
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="assistant",
+        content=opening.answer,
+    )
 
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
@@ -487,7 +507,12 @@ async def practice_session_message(
     if not cleaned_message:
         return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
-    add_simulation_message(db, session.id, "user", cleaned_message)
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="user",
+        content=cleaned_message,
+    )
 
     history_messages = get_simulation_messages(db, session.id)
     history = build_simulation_history(history_messages)
@@ -500,7 +525,12 @@ async def practice_session_message(
         user_message=cleaned_message,
     )
 
-    add_simulation_message(db, session.id, "assistant", ai_reply.answer)
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="assistant",
+        content=ai_reply.answer,
+    )
 
     session.turn_count += 1
     db.commit()
@@ -543,24 +573,12 @@ async def complete_practice_session(
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
 
-@router.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
-
-
-@router.get("/health/db")
-def health_db() -> dict[str, str]:
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
-    return {"status": "ok"}
-
 @router.get("/admin/analytics", response_class=HTMLResponse)
 async def admin_analytics(
     request: Request,
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
     current_user = get_current_user(request, db)
-
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
@@ -585,6 +603,7 @@ async def admin_analytics(
             "scenario_usage": scenario_usage,
         },
     )
+
 
 @router.get("/parent/dashboard", response_class=HTMLResponse)
 async def parent_dashboard(
@@ -641,6 +660,7 @@ async def parent_learner_detail(
         },
     )
 
+
 @router.get("/org/dashboard", response_class=HTMLResponse)
 async def org_dashboard(
     request: Request,
@@ -649,6 +669,9 @@ async def org_dashboard(
     current_user = get_current_user(request, db)
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
 
     organization = get_user_organization(db, current_user)
     if not organization:
@@ -688,6 +711,9 @@ async def org_users_view(
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
     organization = get_user_organization(db, current_user)
     if not organization:
         return RedirectResponse(url="/dashboard", status_code=303)
@@ -715,6 +741,9 @@ async def org_courses_view(
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
     organization = get_user_organization(db, current_user)
     if not organization:
         return RedirectResponse(url="/dashboard", status_code=303)
@@ -731,3 +760,137 @@ async def org_courses_view(
             "org_courses": org_courses,
         },
     )
+
+
+@router.get("/org/users/new", response_class=HTMLResponse)
+async def org_user_new_form(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    return templates.TemplateResponse(
+        "org_user_new.html",
+        {
+            "request": request,
+            "page_title": "Add Organization User | MM",
+            "current_user": current_user,
+            "organization": organization,
+        },
+    )
+
+
+@router.post("/org/users/new")
+async def org_user_create(
+    request: Request,
+    full_name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(...),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    create_org_user(
+        db=db,
+        organization_id=organization.id,
+        full_name=full_name.strip(),
+        email=email.strip().lower(),
+        hashed_password=hash_password(password),
+        role=role.strip(),
+    )
+
+    return RedirectResponse(url="/org/users", status_code=303)
+
+
+@router.get("/org/enrollments/new", response_class=HTMLResponse)
+async def org_enrollment_new_form(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    org_users = get_org_users(db, organization.id)
+    org_courses = get_org_courses(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_enrollment_new.html",
+        {
+            "request": request,
+            "page_title": "Assign Course Enrollment | MM",
+            "current_user": current_user,
+            "organization": organization,
+            "org_users": org_users,
+            "org_courses": org_courses,
+        },
+    )
+
+
+@router.post("/org/enrollments/new")
+async def org_enrollment_create(
+    request: Request,
+    user_id: int = Form(...),
+    course_id: int = Form(...),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    org_user_ids = {user.id for user in get_org_users(db, organization.id)}
+    org_course_ids = {course.id for course in get_org_courses(db, organization.id)}
+
+    if user_id in org_user_ids and course_id in org_course_ids:
+        enroll_user_in_org_course(
+            db=db,
+            user_id=user_id,
+            course_id=course_id,
+        )
+
+    return RedirectResponse(url="/org/dashboard", status_code=303)
+
+
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@router.get("/health/db")
+def health_db() -> dict[str, str]:
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+    return {"status": "ok"}
