@@ -8,6 +8,7 @@ from app.core.deps import get_db
 from app.core.db import engine
 from app.models.course import Course
 from app.models.user import User
+from app.services.ai_coach import get_lesson_coaching_response
 from app.services.auth_service import authenticate_user
 from app.services.course_service import (
     enroll_user_in_course,
@@ -221,6 +222,60 @@ async def lesson_detail(
             "course": course,
             "enrolled": enrolled,
             "completed": completed,
+            "coach_response": None,
+            "coach_prompt": "",
+        },
+    )
+
+
+@router.post("/lessons/{lesson_slug}/coach", response_class=HTMLResponse)
+async def lesson_coach(
+    lesson_slug: str,
+    request: Request,
+    coach_prompt: str = Form(...),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    lesson = get_lesson_by_slug(db, lesson_slug)
+
+    if not lesson:
+        return templates.TemplateResponse(
+            "not_found.html",
+            {
+                "request": request,
+                "page_title": "Not Found | MM",
+                "current_user": current_user,
+                "message": "Lesson not found.",
+            },
+            status_code=404,
+        )
+
+    course = lesson.course
+    enrolled = current_user is not None and is_user_enrolled_in_course(db, current_user, course)
+    completed = current_user is not None and enrolled and is_lesson_complete(db, current_user, lesson)
+
+    coach_response = None
+    cleaned_prompt = coach_prompt.strip()
+
+    if current_user and enrolled and cleaned_prompt:
+        coach_response = get_lesson_coaching_response(
+            lesson_title=lesson.title,
+            lesson_content=lesson.content,
+            user_message=cleaned_prompt,
+        )
+
+    return templates.TemplateResponse(
+        "lesson_detail.html",
+        {
+            "request": request,
+            "page_title": f"{lesson.title} | MM",
+            "current_user": current_user,
+            "lesson": lesson,
+            "course": course,
+            "enrolled": enrolled,
+            "completed": completed,
+            "coach_response": coach_response,
+            "coach_prompt": cleaned_prompt,
         },
     )
 
