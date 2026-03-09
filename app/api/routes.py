@@ -51,6 +51,12 @@ from app.services.course_service import (
     mark_lesson_complete,
 )
 
+from app.services.billing_service import (
+    get_active_plans,
+    get_user_plan,
+    get_user_subscription,
+)
+
 from sqlalchemy.orm import Session
 from app.models.course import Course
 from app.models.lesson import Lesson
@@ -1197,6 +1203,92 @@ async def instructor_lesson_create(
     )
 
     return RedirectResponse(url="/instructor/dashboard", status_code=303)
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "pricing.html",
+        {
+            "request": request,
+            "page_title": "Pricing | MM",
+            "current_user": current_user,
+            "plans": plans,
+        },
+    )
+
+
+@router.get("/billing", response_class=HTMLResponse)
+async def billing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    subscription = get_user_subscription(db, current_user)
+    current_plan = get_user_plan(db, current_user)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "billing.html",
+        {
+            "request": request,
+            "page_title": "Billing | MM",
+            "current_user": current_user,
+            "subscription": subscription,
+            "current_plan": current_plan,
+            "plans": plans,
+        },
+    )
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "pricing.html",
+        {
+            "request": request,
+            "page_title": "Pricing | MM",
+            "current_user": current_user,
+            "plans": plans,
+        },
+    )
+
+
+@router.get("/billing", response_class=HTMLResponse)
+async def billing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    subscription = get_user_subscription(db, current_user)
+    current_plan = get_user_plan(db, current_user)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "billing.html",
+        {
+            "request": request,
+            "page_title": "Billing | MM",
+            "current_user": current_user,
+            "subscription": subscription,
+            "current_plan": current_plan,
+            "plans": plans,
+        },
+    )
 @router.get("/pricing", response_class=HTMLResponse)
 async def pricing_page(
     request: Request,

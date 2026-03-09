@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
 
+from app.models.coach_message import CoachMessage
 from app.models.organization import Organization
 from app.models.plan import Plan
+from app.models.simulation_session import SimulationSession
 from app.models.subscription import Subscription
 from app.models.user import User
 
@@ -62,19 +64,41 @@ def has_feature_access(plan: Plan | None, feature: str) -> bool:
     return feature_map.get(feature, False)
 
 
-def can_use_ai_coach(plan: Plan | None, current_count: int = 0) -> bool:
+def get_user_ai_message_count(db: Session, user: User) -> int:
+    return (
+        db.query(CoachMessage)
+        .filter(
+            CoachMessage.user_id == user.id,
+            CoachMessage.role == "user",
+        )
+        .count()
+    )
+
+
+def get_user_practice_session_count(db: Session, user: User) -> int:
+    return (
+        db.query(SimulationSession)
+        .filter(SimulationSession.user_id == user.id)
+        .count()
+    )
+
+
+def can_use_ai_coach(db: Session, user: User, plan: Plan | None) -> bool:
     if not plan:
         return False
+
+    current_count = get_user_ai_message_count(db, user)
     return current_count < plan.max_ai_messages_per_month
 
 
-def can_use_roleplay(plan: Plan | None, current_count: int = 0) -> bool:
+def can_use_roleplay(db: Session, user: User, plan: Plan | None) -> bool:
     if not plan:
         return False
 
     if not plan.includes_roleplay:
         return False
 
+    current_count = get_user_practice_session_count(db, user)
     return current_count < plan.max_practice_sessions_per_month
 
 

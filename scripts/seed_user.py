@@ -2,15 +2,13 @@ from sqlalchemy.orm import Session
 
 from app.core.db import Base, SessionLocal, engine
 from app.core.security import hash_password
-from app.models import (
-    Course,
-    Lesson,
-    Organization,
-    Plan,
-    Scenario,
-    Subscription,
-    User,
-)
+from app.models.course import Course
+from app.models.lesson import Lesson
+from app.models.organization import Organization
+from app.models.plan import Plan
+from app.models.scenario import Scenario
+from app.models.subscription import Subscription
+from app.models.user import User
 
 
 def seed() -> None:
@@ -19,13 +17,18 @@ def seed() -> None:
     db: Session = SessionLocal()
 
     try:
+        # Organization
         org = db.query(Organization).filter(Organization.slug == "default-org").first()
         if not org:
-            org = Organization(name="Default Organization", slug="default-org")
+            org = Organization(
+                name="Default Organization",
+                slug="default-org",
+            )
             db.add(org)
             db.commit()
             db.refresh(org)
 
+        # Admin user
         existing_user = db.query(User).filter(User.email == "admin@mm.local").first()
         if not existing_user:
             user = User(
@@ -43,6 +46,7 @@ def seed() -> None:
         else:
             print("Seed user already exists: admin@mm.local / Password123!")
 
+        # Courses and lessons
         courses_to_seed = [
             {
                 "title": "Modern Manners Basics",
@@ -109,10 +113,11 @@ def seed() -> None:
 
             db.commit()
 
+        # Roleplay scenario
         intro_lesson = db.query(Lesson).filter(Lesson.slug == "modern-manners-basics-lesson-1").first()
         if intro_lesson:
-            scenario = db.query(Scenario).filter(Scenario.slug == "introduce-yourself-politely").first()
-            if not scenario:
+            existing_scenario = db.query(Scenario).filter(Scenario.slug == "introduce-yourself-politely").first()
+            if not existing_scenario:
                 scenario = Scenario(
                     lesson_id=intro_lesson.id,
                     slug="introduce-yourself-politely",
@@ -127,6 +132,7 @@ def seed() -> None:
                 db.add(scenario)
                 db.commit()
 
+        # Plans
         plans_to_seed = [
             {
                 "name": "Free",
@@ -175,6 +181,7 @@ def seed() -> None:
                 db.add(Plan(**plan_data))
                 db.commit()
 
+        # Assign free plan to admin
         free_plan = db.query(Plan).filter(Plan.slug == "free").first()
         if free_plan and existing_user:
             existing_subscription = (
@@ -185,18 +192,19 @@ def seed() -> None:
                 )
                 .first()
             )
+
             if not existing_subscription:
-                db.add(
-                    Subscription(
-                        user_id=existing_user.id,
-                        plan_id=free_plan.id,
-                        status="active",
-                        provider="manual",
-                    )
+                subscription = Subscription(
+                    user_id=existing_user.id,
+                    plan_id=free_plan.id,
+                    status="active",
+                    provider="manual",
                 )
+                db.add(subscription)
                 db.commit()
 
-        print("Sample courses, lessons, scenario, and billing plans seeded.")
+        print("Seed complete.")
+
     finally:
         db.close()
 
