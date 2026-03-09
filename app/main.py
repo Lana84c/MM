@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
 from app.core.config import settings
+from app.models import organization, user
 
 app = FastAPI(
     title=settings.app_name,
