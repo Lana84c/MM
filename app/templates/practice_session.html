@@ -22,6 +22,11 @@
                 <h3>Difficulty</h3>
                 <p>{{ scenario.difficulty|title }}</p>
             </div>
+
+            <div class="info-card">
+                <h3>Status</h3>
+                <p>{{ session.status|title }}</p>
+            </div>
         </div>
     </div>
 </section>
@@ -49,9 +54,14 @@
                         <div class="chat-text">{{ msg.content }}</div>
                     </div>
                 </div>
+            {% else %}
+                <div class="empty-chat-state">
+                    <p>No practice messages yet.</p>
+                </div>
             {% endfor %}
         </div>
 
+        {% if session.status != "completed" %}
         <div class="chat-footer">
             <form method="post" action="/practice/{{ session.id }}/message" class="chat-form">
                 <label for="practice_message" class="sr-only">Your roleplay response</label>
@@ -66,7 +76,54 @@
                     <button type="submit" class="button primary">Send Reply</button>
                 </div>
             </form>
+
+            <div class="actions" style="margin-top: 0.75rem;">
+                <form method="post" action="/practice/{{ session.id }}/complete">
+                    <button type="submit" class="button secondary">Complete Practice</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="chat-footer">
+            <div class="practice-complete-banner">
+                <strong>Practice session completed.</strong>
+                <span>Your feedback is shown below.</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% if session.status == "completed" and session.feedback_summary %}
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Evaluation</p>
+        <h2>Your coaching feedback</h2>
+    </div>
+
+    <div class="auth-card">
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Score</h3>
+                <p class="score-display">{{ session.score }}/10</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Next Step</h3>
+                <p>Review the feedback below, then try the scenario again with a stronger response.</p>
+            </div>
+        </div>
+
+        <div class="coach-response">
+            <h3>Feedback Summary</h3>
+            <pre>{{ session.feedback_summary }}</pre>
+        </div>
+
+        <div class="actions">
+            <a class="button secondary" href="/lessons/{{ lesson.slug }}/practice">Practice Again</a>
+            <a class="button primary" href="/lessons/{{ lesson.slug }}">Return to Lesson</a>
         </div>
     </div>
 </section>
+{% endif %}
 {% endblock %}

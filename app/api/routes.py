@@ -3,9 +3,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from app.core.db import engine
+from app.services.analytics_service import get_platform_stats
 from app.core.deps import get_db
+from app.core.db import engine
+from app.models.course import Course
 from app.models.user import User
 from app.services.ai_coach import get_lesson_coaching_response
 from app.services.auth_service import authenticate_user
@@ -27,6 +28,7 @@ from app.services.course_service import (
     is_user_enrolled_in_course,
     mark_lesson_complete,
 )
+from app.services.evaluation_service import evaluate_roleplay_session
 from app.services.roleplay_service import (
     get_roleplay_opening_response,
     get_roleplay_turn_response,
@@ -287,12 +289,7 @@ async def lesson_coach(
     if current_user and enrolled and cleaned_prompt:
         history = get_lesson_conversation(db, current_user.id, lesson.id)
 
-        save_user_message(
-            db=db,
-            user_id=current_user.id,
-            lesson_id=lesson.id,
-            content=cleaned_prompt,
-        )
+        save_user_message(db, current_user.id, lesson.id, cleaned_prompt)
 
         coach_response = get_lesson_coaching_response(
             lesson_title=lesson.title,
@@ -301,13 +298,7 @@ async def lesson_coach(
             history=history,
         )
 
-        save_ai_message(
-            db=db,
-            user_id=current_user.id,
-            lesson_id=lesson.id,
-            content=coach_response.answer,
-        )
-
+        save_ai_message(db, current_user.id, lesson.id, coach_response.answer)
         conversation = get_lesson_conversation(db, current_user.id, lesson.id)
     elif current_user:
         conversation = get_lesson_conversation(db, current_user.id, lesson.id)
@@ -425,12 +416,7 @@ async def start_practice(
         learner_objective=scenario.learner_objective,
     )
 
-    add_simulation_message(
-        db=db,
-        session_id=session.id,
-        role="assistant",
-        content=opening.answer,
-    )
+    add_simulation_message(db, session.id, "assistant", opening.answer)
 
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
@@ -481,16 +467,14 @@ async def practice_session_message(
     if not session:
         return RedirectResponse(url="/dashboard", status_code=303)
 
+    if session.status == "completed":
+        return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
+
     cleaned_message = practice_message.strip()
     if not cleaned_message:
         return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
-    add_simulation_message(
-        db=db,
-        session_id=session.id,
-        role="user",
-        content=cleaned_message,
-    )
+    add_simulation_message(db, session.id, "user", cleaned_message)
 
     history_messages = get_simulation_messages(db, session.id)
     history = build_simulation_history(history_messages)
@@ -503,14 +487,44 @@ async def practice_session_message(
         user_message=cleaned_message,
     )
 
-    add_simulation_message(
-        db=db,
-        session_id=session.id,
-        role="assistant",
-        content=ai_reply.answer,
-    )
+    add_simulation_message(db, session.id, "assistant", ai_reply.answer)
 
     session.turn_count += 1
+    db.commit()
+
+    return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
+
+
+@router.post("/practice/{session_id}/complete")
+async def complete_practice_session(
+    session_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    session = get_simulation_session(db, session_id, current_user.id)
+    if not session:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if session.status == "completed":
+        return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
+
+    messages = get_simulation_messages(db, session.id)
+    history = build_simulation_history(messages)
+
+    evaluation = evaluate_roleplay_session(
+        scenario_title=session.scenario.title,
+        ai_role=session.scenario.ai_role,
+        learner_objective=session.scenario.learner_objective,
+        messages=history,
+    )
+
+    session.status = "completed"
+    session.score = evaluation.score
+    session.feedback_summary = evaluation.feedback_summary
     db.commit()
 
     return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
@@ -526,3 +540,26 @@ def health_db() -> dict[str, str]:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     return {"status": "ok"}
+
+@router.get("/admin/analytics", response_class=HTMLResponse)
+async def admin_analytics(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+
+    current_user = get_current_user(request, db)
+
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    stats = get_platform_stats(db)
+
+    return templates.TemplateResponse(
+        "admin_analytics.html",
+        {
+            "request": request,
+            "page_title": "Platform Analytics | MM",
+            "current_user": current_user,
+            "stats": stats,
+        },
+    )

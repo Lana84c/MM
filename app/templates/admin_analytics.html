@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Admin</p>
+        <h1>Platform Analytics</h1>
+        <p class="lead">Overview of platform activity.</p>
+    </div>
+</section>
+
+<section class="catalog">
+
+    <div class="section-heading">
+        <p class="eyebrow">Statistics</p>
+        <h2>Platform Overview</h2>
+    </div>
+
+    <div class="info-grid">
+
+        <div class="info-card">
+            <h3>Total Users</h3>
+            <p>{{ stats.total_users }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Total Courses</h3>
+            <p>{{ stats.total_courses }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Total Lessons</h3>
+            <p>{{ stats.total_lessons }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Enrollments</h3>
+            <p>{{ stats.total_enrollments }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Completed Lessons</h3>
+            <p>{{ stats.completed_lessons }}</p>
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
