@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Instructor</p>
+        <h1>Create Lesson</h1>
+        <p class="lead">Add a new lesson to one of your courses.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="auth-card">
+        <form method="post" action="/instructor/lessons/new" class="auth-form">
+            <label for="course_id">Course</label>
+            <select id="course_id" name="course_id" required>
+                {% for course in courses %}
+                    <option value="{{ course.id }}">{{ course.title }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="title">Lesson Title</label>
+            <input id="title" name="title" type="text" required />
+
+            <label for="slug">Slug</label>
+            <input id="slug" name="slug" type="text" required />
+
+            <label for="content">Lesson Content</label>
+            <textarea id="content" name="content" rows="8" required></textarea>
+
+            <label for="sort_order">Sort Order</label>
+            <input id="sort_order" name="sort_order" type="number" value="1" required />
+
+            <div class="actions">
+                <button type="submit" class="button primary">Create Lesson</button>
+                <a class="button secondary" href="/instructor/dashboard">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Instructor</p>
+        <h1>Instructor Dashboard</h1>
+        <p class="lead">Manage courses and lessons for your organization.</p>
+
+        <div class="actions">
+            <a class="button primary" href="/instructor/courses/new">Create Course</a>
+            <a class="button secondary" href="/instructor/lessons/new">Create Lesson</a>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Courses</p>
+        <h2>Your Organization Courses</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for course in courses %}
+            <div class="info-card">
+                <h3>{{ course.title }}</h3>
+                <p>{{ course.description }}</p>
+                <p><strong>Difficulty:</strong> {{ course.difficulty|title }}</p>
+                <p><strong>Published:</strong> {{ "Yes" if course.published else "No" }}</p>
+            </div>
+        {% else %}
+            <div class="info-card">
+                <h3>No courses yet</h3>
+                <p>Create your first course to begin building content.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

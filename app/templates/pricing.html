@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Plans</p>
+        <h1>Pricing</h1>
+        <p class="lead">Choose the plan that fits your learning or organization needs.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="info-grid">
+        {% for plan in plans %}
+        <div class="info-card">
+            <h3>{{ plan.name }}</h3>
+            <p>{{ plan.description }}</p>
+            <p><strong>Price:</strong>
+                {% if plan.price_cents == 0 %}
+                    Free
+                {% else %}
+                    ${{ "%.2f"|format(plan.price_cents / 100) }}/{{ plan.billing_interval }}
+                {% endif %}
+            </p>
+            <p><strong>AI Messages:</strong> {{ plan.max_ai_messages_per_month }}/month</p>
+            <p><strong>Practice Sessions:</strong> {{ plan.max_practice_sessions_per_month }}/month</p>
+            <p><strong>Max Learners:</strong> {{ plan.max_learners }}</p>
+            <p><strong>Roleplay:</strong> {{ "Yes" if plan.includes_roleplay else "No" }}</p>
+            <p><strong>Org Dashboard:</strong> {{ "Yes" if plan.includes_org_dashboard else "No" }}</p>
+            <p><strong>Advanced Analytics:</strong> {{ "Yes" if plan.includes_advanced_analytics else "No" }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

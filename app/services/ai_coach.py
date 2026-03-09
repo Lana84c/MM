@@ -16,10 +16,13 @@ def build_fallback_response(
     lesson_title: str,
     lesson_content: str,
     user_message: str,
+    learner_context: str | None = None,
 ) -> AICoachResponse:
+    context_block = f"\nLearner context:\n{learner_context}\n" if learner_context else ""
+
     answer = f"""
 Lesson focus: {lesson_title}
-
+{context_block}
 You asked: {user_message}
 
 Here is a respectful, practical approach:
@@ -60,7 +63,8 @@ Your role:
 - Do not provide unsafe, abusive, manipulative, sexual, or hateful guidance.
 - Do not encourage humiliation, retaliation, cruelty, or deception.
 - Prefer short examples, scripts, roleplay prompts, and step-by-step coaching.
-- Stay grounded in the lesson topic and the learner's question.
+- Stay grounded in the lesson topic, learner history, and current question.
+- Use learner progress context when helpful.
 - Do not claim professional legal, medical, or mental health authority.
 - If a learner asks for something unsafe, redirect to a safer, respectful alternative.
 
@@ -94,48 +98,36 @@ def get_lesson_coaching_response(
     lesson_content: str,
     user_message: str,
     history=None,
+    learner_context: str | None = None,
 ) -> AICoachResponse:
-
     if not settings.openai_api_key:
         return build_fallback_response(
             lesson_title=lesson_title,
             lesson_content=lesson_content,
             user_message=user_message,
+            learner_context=learner_context,
         )
 
     try:
         client = OpenAI(api_key=settings.openai_api_key)
 
-        prompt = f"""
-Lesson title: {lesson_title}
+        prompt_parts = [
+            f"Lesson title: {lesson_title}",
+            f"Lesson content:\n{lesson_content}",
+        ]
 
-Lesson content:
-{lesson_content}
+        if learner_context:
+            prompt_parts.append(f"Learner context:\n{learner_context}")
 
-Learner question:
-{user_message}
-""".strip()
+        prompt_parts.append(f"Learner question:\n{user_message}")
+        prompt = "\n\n".join(prompt_parts)
 
         messages = [
             {"role": "system", "content": build_system_prompt()},
         ]
 
-        # ADD CONVERSATION HISTORY
-        if history:
-            for msg in history:
-                messages.append(
-                    {
-                        "role": msg.role,
-                        "content": msg.content,
-                    }
-                )
-
-        messages.append(
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        )
+        messages += build_history_messages(history)
+        messages.append({"role": "user", "content": prompt})
 
         response = client.responses.create(
             model=settings.openai_model,
@@ -149,6 +141,7 @@ Learner question:
                 lesson_title=lesson_title,
                 lesson_content=lesson_content,
                 user_message=user_message,
+                learner_context=learner_context,
             )
 
         return AICoachResponse(
@@ -162,4 +155,5 @@ Learner question:
             lesson_title=lesson_title,
             lesson_content=lesson_content,
             user_message=user_message,
+            learner_context=learner_context,
         )

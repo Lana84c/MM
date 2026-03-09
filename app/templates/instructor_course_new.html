@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Instructor</p>
+        <h1>Create Course</h1>
+        <p class="lead">Add a new course for your organization.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="auth-card">
+        <form method="post" action="/instructor/courses/new" class="auth-form">
+            <label for="title">Course Title</label>
+            <input id="title" name="title" type="text" required />
+
+            <label for="slug">Slug</label>
+            <input id="slug" name="slug" type="text" required />
+
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="5" required></textarea>
+
+            <label for="difficulty">Difficulty</label>
+            <select id="difficulty" name="difficulty" required>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+            </select>
+
+            <label>
+                <input type="checkbox" name="published" value="true" />
+                Publish immediately
+            </label>
+
+            <div class="actions">
+                <button type="submit" class="button primary">Create Course</button>
+                <a class="button secondary" href="/instructor/dashboard">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

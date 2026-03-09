@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Account</p>
+        <h1>Billing</h1>
+        <p class="lead">Review your current plan and available upgrades.</p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Current Plan</h3>
+                <p>{{ current_plan.name if current_plan else "No active plan" }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Subscription Status</h3>
+                <p>{{ subscription.status|title if subscription else "Inactive" }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Available Plans</p>
+        <h2>Upgrade options</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for plan in plans %}
+        <div class="info-card">
+            <h3>{{ plan.name }}</h3>
+            <p>{{ plan.description }}</p>
+            <p><strong>Price:</strong>
+                {% if plan.price_cents == 0 %}
+                    Free
+                {% else %}
+                    ${{ "%.2f"|format(plan.price_cents / 100) }}/{{ plan.billing_interval }}
+                {% endif %}
+            </p>
+
+            {% if current_plan and current_plan.slug == plan.slug %}
+                <span class="status-complete large">Current Plan</span>
+            {% else %}
+                <a class="button primary" href="/pricing">View Plan Details</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

@@ -11,10 +11,12 @@ from app.models import (
     enrollment,
     lesson,
     organization,
+    plan,
     progress,
     scenario,
     simulation_message,
     simulation_session,
+    subscription,
     user,
 )
 

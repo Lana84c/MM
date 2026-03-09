@@ -4,6 +4,12 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.billing_service import (
+    get_active_plans,
+    get_user_plan,
+    get_user_subscription,
+)
+
 from app.core.deps import get_db
 from app.core.db import engine
 from app.core.security import hash_password
@@ -17,6 +23,14 @@ from app.services.analytics_service import (
     get_scenario_usage_stats,
     get_top_coach_questions,
 )
+
+from app.services.instructor_service import (
+    create_course,
+    create_lesson,
+    get_org_courses as get_instructor_org_courses,
+    is_instructor,
+)
+
 from app.services.auth_service import authenticate_user
 from app.services.coach_memory_service import (
     get_lesson_conversation,
@@ -36,7 +50,83 @@ from app.services.course_service import (
     is_user_enrolled_in_course,
     mark_lesson_complete,
 )
+
+from sqlalchemy.orm import Session
+from app.models.course import Course
+from app.models.lesson import Lesson
+from app.models.user import User
+
+
+def is_instructor(user: User) -> bool:
+    return user.role in ["admin", "org_admin", "instructor"]
+
+
+def create_course(
+    db: Session,
+    organization_id: int,
+    title: str,
+    slug: str,
+    description: str,
+    difficulty: str,
+    published: bool,
+) -> Course:
+
+    course = Course(
+        organization_id=organization_id,
+        title=title,
+        slug=slug,
+        description=description,
+        difficulty=difficulty,
+        published=published,
+    )
+
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+
+    return course
+
+
+def create_lesson(
+    db: Session,
+    course_id: int,
+    title: str,
+    slug: str,
+    content: str,
+    sort_order: int,
+) -> Lesson:
+
+    lesson = Lesson(
+        course_id=course_id,
+        title=title,
+        slug=slug,
+        content=content,
+        sort_order=sort_order,
+    )
+
+    db.add(lesson)
+    db.commit()
+    db.refresh(lesson)
+
+    return lesson
+
+
+def get_org_courses(db: Session, organization_id: int):
+    return (
+        db.query(Course)
+        .filter(Course.organization_id == organization_id)
+        .order_by(Course.title)
+        .all()
+    )
+
 from app.services.evaluation_service import evaluate_roleplay_session
+from app.services.learner_context_service import build_learner_context_summary
+from app.services.org_analytics_service import (
+    get_org_course_enrollment_stats,
+    get_org_lesson_completion_stats,
+    get_org_platform_stats,
+    get_org_top_coach_questions,
+)
 from app.services.org_service import (
     create_org_user,
     enroll_user_in_org_course,
@@ -58,13 +148,6 @@ from app.services.simulation_service import (
     get_scenario_by_id,
     get_simulation_messages,
     get_simulation_session,
-)
-
-from app.services.org_analytics_service import (
-    get_org_course_enrollment_stats,
-    get_org_lesson_completion_stats,
-    get_org_platform_stats,
-    get_org_top_coach_questions,
 )
 
 router = APIRouter()
@@ -320,11 +403,14 @@ async def lesson_coach(
             content=cleaned_prompt,
         )
 
+        learner_context = build_learner_context_summary(db, current_user)
+
         coach_response = get_lesson_coaching_response(
             lesson_title=lesson.title,
             lesson_content=lesson.content,
             user_message=cleaned_prompt,
             history=history,
+            learner_context=learner_context,
         )
 
         save_ai_message(
@@ -769,6 +855,42 @@ async def org_courses_view(
     )
 
 
+@router.get("/org/analytics", response_class=HTMLResponse)
+async def org_analytics(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    stats = get_org_platform_stats(db, organization.id)
+    course_stats = get_org_course_enrollment_stats(db, organization.id)
+    lesson_stats = get_org_lesson_completion_stats(db, organization.id)
+    top_questions = get_org_top_coach_questions(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_analytics.html",
+        {
+            "request": request,
+            "page_title": f"{organization.name} | Org Analytics",
+            "current_user": current_user,
+            "organization": organization,
+            "stats": stats,
+            "course_stats": course_stats,
+            "lesson_stats": lesson_stats,
+            "top_questions": top_questions,
+        },
+    )
+
+
 @router.get("/org/users/new", response_class=HTMLResponse)
 async def org_user_new_form(
     request: Request,
@@ -890,6 +1012,7 @@ async def org_enrollment_create(
 
     return RedirectResponse(url="/org/dashboard", status_code=303)
 
+
 @router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -901,8 +1024,33 @@ def health_db() -> dict[str, str]:
         connection.execute(text("SELECT 1"))
     return {"status": "ok"}
 
-@router.get("/org/analytics", response_class=HTMLResponse)
-async def org_analytics(
+@router.get("/instructor/dashboard", response_class=HTMLResponse)
+async def instructor_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    current_user = get_current_user(request, db)
+
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_instructor(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    courses = get_org_courses(db, current_user.organization_id)
+
+    return templates.TemplateResponse(
+        "instructor_dashboard.html",
+        {
+            "request": request,
+            "page_title": "Instructor Dashboard | MM",
+            "current_user": current_user,
+            "courses": courses,
+        },
+    )
+
+@router.get("/instructor/dashboard", response_class=HTMLResponse)
+async def instructor_dashboard(
     request: Request,
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
@@ -910,28 +1058,185 @@ async def org_analytics(
     if not current_user:
         return RedirectResponse(url="/login", status_code=303)
 
-    if not is_org_admin(current_user):
+    if not is_instructor(current_user):
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    organization = get_user_organization(db, current_user)
-    if not organization:
+    if not current_user.organization_id:
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    stats = get_org_platform_stats(db, organization.id)
-    course_stats = get_org_course_enrollment_stats(db, organization.id)
-    lesson_stats = get_org_lesson_completion_stats(db, organization.id)
-    top_questions = get_org_top_coach_questions(db, organization.id)
+    courses = get_instructor_org_courses(db, current_user.organization_id)
 
     return templates.TemplateResponse(
-        "org_analytics.html",
+        "instructor_dashboard.html",
         {
             "request": request,
-            "page_title": f"{organization.name} | Org Analytics",
+            "page_title": "Instructor Dashboard | MM",
             "current_user": current_user,
-            "organization": organization,
-            "stats": stats,
-            "course_stats": course_stats,
-            "lesson_stats": lesson_stats,
-            "top_questions": top_questions,
+            "courses": courses,
+        },
+    )
+
+
+@router.get("/instructor/courses/new", response_class=HTMLResponse)
+async def instructor_course_new(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_instructor(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    return templates.TemplateResponse(
+        "instructor_course_new.html",
+        {
+            "request": request,
+            "page_title": "Create Course | MM",
+            "current_user": current_user,
+        },
+    )
+
+
+@router.post("/instructor/courses/new")
+async def instructor_course_create(
+    request: Request,
+    title: str = Form(...),
+    slug: str = Form(...),
+    description: str = Form(...),
+    difficulty: str = Form(...),
+    published: str | None = Form(None),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_instructor(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if not current_user.organization_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    create_course(
+        db=db,
+        organization_id=current_user.organization_id,
+        title=title.strip(),
+        slug=slug.strip(),
+        description=description.strip(),
+        difficulty=difficulty.strip(),
+        published=published is not None,
+    )
+
+    return RedirectResponse(url="/instructor/dashboard", status_code=303)
+
+
+@router.get("/instructor/lessons/new", response_class=HTMLResponse)
+async def instructor_lesson_new(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_instructor(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if not current_user.organization_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    courses = get_instructor_org_courses(db, current_user.organization_id)
+
+    return templates.TemplateResponse(
+        "instructor_lesson_new.html",
+        {
+            "request": request,
+            "page_title": "Create Lesson | MM",
+            "current_user": current_user,
+            "courses": courses,
+        },
+    )
+
+
+@router.post("/instructor/lessons/new")
+async def instructor_lesson_create(
+    request: Request,
+    course_id: int = Form(...),
+    title: str = Form(...),
+    slug: str = Form(...),
+    content: str = Form(...),
+    sort_order: int = Form(...),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_instructor(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if not current_user.organization_id:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    allowed_course_ids = {
+        course.id for course in get_instructor_org_courses(db, current_user.organization_id)
+    }
+
+    if course_id not in allowed_course_ids:
+        return RedirectResponse(url="/instructor/dashboard", status_code=303)
+
+    create_lesson(
+        db=db,
+        course_id=course_id,
+        title=title.strip(),
+        slug=slug.strip(),
+        content=content.strip(),
+        sort_order=sort_order,
+    )
+
+    return RedirectResponse(url="/instructor/dashboard", status_code=303)
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "pricing.html",
+        {
+            "request": request,
+            "page_title": "Pricing | MM",
+            "current_user": current_user,
+            "plans": plans,
+        },
+    )
+
+
+@router.get("/billing", response_class=HTMLResponse)
+async def billing_page(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    subscription = get_user_subscription(db, current_user)
+    current_plan = get_user_plan(db, current_user)
+    plans = get_active_plans(db)
+
+    return templates.TemplateResponse(
+        "billing.html",
+        {
+            "request": request,
+            "page_title": "Billing | MM",
+            "current_user": current_user,
+            "subscription": subscription,
+            "current_plan": current_plan,
+            "plans": plans,
         },
     )
