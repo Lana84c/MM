@@ -60,6 +60,13 @@ from app.services.simulation_service import (
     get_simulation_session,
 )
 
+from app.services.org_analytics_service import (
+    get_org_course_enrollment_stats,
+    get_org_lesson_completion_stats,
+    get_org_platform_stats,
+    get_org_top_coach_questions,
+)
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
@@ -883,7 +890,6 @@ async def org_enrollment_create(
 
     return RedirectResponse(url="/org/dashboard", status_code=303)
 
-
 @router.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -894,3 +900,38 @@ def health_db() -> dict[str, str]:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     return {"status": "ok"}
+
+@router.get("/org/analytics", response_class=HTMLResponse)
+async def org_analytics(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not is_org_admin(current_user):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    stats = get_org_platform_stats(db, organization.id)
+    course_stats = get_org_course_enrollment_stats(db, organization.id)
+    lesson_stats = get_org_lesson_completion_stats(db, organization.id)
+    top_questions = get_org_top_coach_questions(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_analytics.html",
+        {
+            "request": request,
+            "page_title": f"{organization.name} | Org Analytics",
+            "current_user": current_user,
+            "organization": organization,
+            "stats": stats,
+            "course_stats": course_stats,
+            "lesson_stats": lesson_stats,
+            "top_questions": top_questions,
+        },
+    )

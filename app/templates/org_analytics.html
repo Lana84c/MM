@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Organization Analytics</p>
+        <h1>{{ organization.name }}</h1>
+        <p class="lead">Organization-scoped learning, engagement, and AI usage metrics.</p>
+
+        <div class="actions">
+            <a class="button secondary" href="/org/dashboard">Back to Org Dashboard</a>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Overview</p>
+        <h2>Organization totals</h2>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Total Users</h3>
+            <p>{{ stats.total_users }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Total Courses</h3>
+            <p>{{ stats.total_courses }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Enrollments</h3>
+            <p>{{ stats.total_enrollments }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Completed Lessons</h3>
+            <p>{{ stats.completed_lessons }}</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Practice Sessions</h3>
+            <p>{{ stats.practice_sessions }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Courses</p>
+        <h2>Course Enrollments</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Course</th>
+            <th>Enrollments</th>
+        </tr>
+        {% for row in course_stats %}
+        <tr>
+            <td>{{ row.course }}</td>
+            <td>{{ row.enrollments }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No course data available.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Lessons</p>
+        <h2>Lesson Completions</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Lesson</th>
+            <th>Completions</th>
+        </tr>
+        {% for row in lesson_stats %}
+        <tr>
+            <td>{{ row.lesson }}</td>
+            <td>{{ row.completions }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No lesson completion data available.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">AI Coach</p>
+        <h2>Top Learner Questions</h2>
+    </div>
+
+    <table class="table">
+        <tr>
+            <th>Question</th>
+            <th>Times Asked</th>
+        </tr>
+        {% for row in top_questions %}
+        <tr>
+            <td>{{ row.question }}</td>
+            <td>{{ row.count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="2">No AI coach question data available.</td>
+        </tr>
+        {% endfor %}
+    </table>
+</section>
+{% endblock %}
