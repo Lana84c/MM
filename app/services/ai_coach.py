@@ -95,6 +95,7 @@ def get_lesson_coaching_response(
     user_message: str,
     history=None,
 ) -> AICoachResponse:
+
     if not settings.openai_api_key:
         return build_fallback_response(
             lesson_title=lesson_title,
@@ -119,7 +120,15 @@ Learner question:
             {"role": "system", "content": build_system_prompt()},
         ]
 
-        messages += build_history_messages(history)
+        # ADD CONVERSATION HISTORY
+        if history:
+            for msg in history:
+                messages.append(
+                    {
+                        "role": msg.role,
+                        "content": msg.content,
+                    }
+                )
 
         messages.append(
             {

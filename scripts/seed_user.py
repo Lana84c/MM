@@ -1,3 +1,4 @@
+from app.models.scenario import Scenario
 from sqlalchemy.orm import Session
 
 from app.core.db import Base, SessionLocal, engine

@@ -5,7 +5,18 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api.routes import router
 from app.core.config import settings
 from app.core.db import Base, engine
-from app.models import course, enrollment, lesson, organization, progress, user
+from app.models import (
+    coach_message,
+    course,
+    enrollment,
+    lesson,
+    organization,
+    progress,
+    scenario,
+    simulation_message,
+    simulation_session,
+    user,
+)
 
 app = FastAPI(
     title=settings.app_name,

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Practice Mode</p>
+        <h1>{{ lesson.title }}</h1>
+        <p class="lead">Choose a scenario to practice this lesson in a live AI roleplay.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Scenarios</p>
+        <h2>Start a roleplay session</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for scenario in scenarios %}
+            <div class="info-card">
+                <h3>{{ scenario.title }}</h3>
+                <p>{{ scenario.description }}</p>
+                <p><strong>AI Role:</strong> {{ scenario.ai_role }}</p>
+                <p><strong>Goal:</strong> {{ scenario.learner_objective }}</p>
+
+                <form method="post" action="/lessons/{{ lesson.slug }}/practice/start">
+                    <input type="hidden" name="scenario_id" value="{{ scenario.id }}">
+                    <button type="submit" class="button primary">Start Practice</button>
+                </form>
+            </div>
+        {% else %}
+            <div class="info-card">
+                <h3>No scenarios yet</h3>
+                <p>Practice scenarios have not been added for this lesson yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

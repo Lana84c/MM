@@ -4,9 +4,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db
 from app.core.db import engine
-from app.models.course import Course
+from app.core.deps import get_db
 from app.models.user import User
 from app.services.ai_coach import get_lesson_coaching_response
 from app.services.auth_service import authenticate_user
@@ -27,6 +26,19 @@ from app.services.course_service import (
     is_lesson_complete,
     is_user_enrolled_in_course,
     mark_lesson_complete,
+)
+from app.services.roleplay_service import (
+    get_roleplay_opening_response,
+    get_roleplay_turn_response,
+)
+from app.services.simulation_service import (
+    add_simulation_message,
+    build_simulation_history,
+    create_simulation_session,
+    get_active_scenarios_for_lesson,
+    get_scenario_by_id,
+    get_simulation_messages,
+    get_simulation_session,
 )
 
 router = APIRouter()
@@ -335,6 +347,173 @@ async def complete_lesson(
         mark_lesson_complete(db, current_user, lesson)
 
     return RedirectResponse(url=f"/lessons/{lesson.slug}", status_code=303)
+
+
+@router.get("/lessons/{lesson_slug}/practice", response_class=HTMLResponse)
+async def lesson_practice(
+    lesson_slug: str,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    lesson = get_lesson_by_slug(db, lesson_slug)
+    if not lesson:
+        return templates.TemplateResponse(
+            "not_found.html",
+            {
+                "request": request,
+                "page_title": "Not Found | MM",
+                "current_user": current_user,
+                "message": "Lesson not found.",
+            },
+            status_code=404,
+        )
+
+    if not is_user_enrolled_in_course(db, current_user, lesson.course):
+        return RedirectResponse(url=f"/courses/{lesson.course.slug}", status_code=303)
+
+    scenarios = get_active_scenarios_for_lesson(db, lesson.id)
+
+    return templates.TemplateResponse(
+        "practice_select.html",
+        {
+            "request": request,
+            "page_title": f"Practice | {lesson.title}",
+            "current_user": current_user,
+            "lesson": lesson,
+            "course": lesson.course,
+            "scenarios": scenarios,
+        },
+    )
+
+
+@router.post("/lessons/{lesson_slug}/practice/start")
+async def start_practice(
+    lesson_slug: str,
+    request: Request,
+    scenario_id: int = Form(...),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    lesson = get_lesson_by_slug(db, lesson_slug)
+    if not lesson:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    if not is_user_enrolled_in_course(db, current_user, lesson.course):
+        return RedirectResponse(url=f"/courses/{lesson.course.slug}", status_code=303)
+
+    scenario = get_scenario_by_id(db, scenario_id)
+    if not scenario or scenario.lesson_id != lesson.id:
+        return RedirectResponse(url=f"/lessons/{lesson.slug}/practice", status_code=303)
+
+    session = create_simulation_session(
+        db=db,
+        user=current_user,
+        lesson_id=lesson.id,
+        scenario_id=scenario.id,
+    )
+
+    opening = get_roleplay_opening_response(
+        scenario_title=scenario.title,
+        ai_role=scenario.ai_role,
+        learner_objective=scenario.learner_objective,
+    )
+
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="assistant",
+        content=opening.answer,
+    )
+
+    return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
+
+
+@router.get("/practice/{session_id}", response_class=HTMLResponse)
+async def practice_session_view(
+    session_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    session = get_simulation_session(db, session_id, current_user.id)
+    if not session:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    messages = get_simulation_messages(db, session.id)
+
+    return templates.TemplateResponse(
+        "practice_session.html",
+        {
+            "request": request,
+            "page_title": "Practice Session | MM",
+            "current_user": current_user,
+            "session": session,
+            "lesson": session.lesson,
+            "course": session.lesson.course,
+            "scenario": session.scenario,
+            "messages": messages,
+        },
+    )
+
+
+@router.post("/practice/{session_id}/message")
+async def practice_session_message(
+    session_id: int,
+    request: Request,
+    practice_message: str = Form(...),
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    session = get_simulation_session(db, session_id, current_user.id)
+    if not session:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    cleaned_message = practice_message.strip()
+    if not cleaned_message:
+        return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
+
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="user",
+        content=cleaned_message,
+    )
+
+    history_messages = get_simulation_messages(db, session.id)
+    history = build_simulation_history(history_messages)
+
+    ai_reply = get_roleplay_turn_response(
+        scenario_title=session.scenario.title,
+        ai_role=session.scenario.ai_role,
+        learner_objective=session.scenario.learner_objective,
+        history=history,
+        user_message=cleaned_message,
+    )
+
+    add_simulation_message(
+        db=db,
+        session_id=session.id,
+        role="assistant",
+        content=ai_reply.answer,
+    )
+
+    session.turn_count += 1
+    db.commit()
+
+    return RedirectResponse(url=f"/practice/{session.id}", status_code=303)
 
 
 @router.get("/health")

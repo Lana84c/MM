@@ -9,6 +9,7 @@
 
         <div class="actions">
             <a class="button secondary" href="/courses/{{ course.slug }}">Back to Course</a>
+            <a class="button secondary" href="/lessons/{{ lesson.slug }}/practice">Practice This Lesson</a>
 
             {% if current_user and enrolled and not completed %}
                 <form method="post" action="/lessons/{{ lesson.slug }}/complete" class="inline-form">
@@ -59,15 +60,6 @@
                 {% else %}
                     <div class="empty-chat-state">
                         <p>No messages yet. Ask the AI Coach a question to start practicing this lesson.</p>
-                    </div>
-                {% endif %}
-
-                {% if coach_response and (not conversation or conversation[-1].role != 'assistant') %}
-                    <div class="chat-row assistant">
-                        <div class="chat-bubble assistant">
-                            <div class="chat-role">AI Coach</div>
-                            <div class="chat-text">{{ coach_response.answer }}</div>
-                        </div>
                     </div>
                 {% endif %}
             {% else %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Roleplay Practice</p>
+        <h1>{{ scenario.title }}</h1>
+        <p class="lead">{{ scenario.description }}</p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>AI Role</h3>
+                <p>{{ scenario.ai_role }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Your Goal</h3>
+                <p>{{ scenario.learner_objective }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Difficulty</h3>
+                <p>{{ scenario.difficulty|title }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="chat-shell">
+        <div class="chat-header">
+            <div>
+                <h3>Live Roleplay</h3>
+                <p>Practice your response naturally and respectfully.</p>
+            </div>
+        </div>
+
+        <div class="chat-body">
+            {% for msg in messages %}
+                <div class="chat-row {% if msg.role == 'user' %}user{% else %}assistant{% endif %}">
+                    <div class="chat-bubble {% if msg.role == 'user' %}user{% else %}assistant{% endif %}">
+                        <div class="chat-role">
+                            {% if msg.role == "user" %}
+                                You
+                            {% else %}
+                                {{ scenario.ai_role }}
+                            {% endif %}
+                        </div>
+                        <div class="chat-text">{{ msg.content }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="chat-footer">
+            <form method="post" action="/practice/{{ session.id }}/message" class="chat-form">
+                <label for="practice_message" class="sr-only">Your roleplay response</label>
+                <textarea
+                    id="practice_message"
+                    name="practice_message"
+                    rows="3"
+                    placeholder="Type your reply in the scenario..."
+                    required
+                ></textarea>
+                <div class="chat-actions">
+                    <button type="submit" class="button primary">Send Reply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
