@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Organization Users</p>
+        <h1>{{ organization.name }}</h1>
+        <p class="lead">Users assigned to this organization.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <table class="table">
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+        </tr>
+        {% for user in org_users %}
+        <tr>
+            <td>{{ user.full_name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role|title }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No users found for this organization.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="actions" style="margin-top: 1rem;">
+        <a class="button secondary" href="/org/dashboard">Back to Org Dashboard</a>
+    </div>
+</section>
+{% endblock %}

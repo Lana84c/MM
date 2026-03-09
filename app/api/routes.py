@@ -1,5 +1,7 @@
 from app.services.parent_service import get_all_learners, get_learner_summary
 
+from app.services.org_service import get_org_courses, get_org_users, get_user_organization
+
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -636,5 +638,96 @@ async def parent_learner_detail(
             "page_title": f"Learner Progress | {summary['learner'].full_name}",
             "current_user": current_user,
             "summary": summary,
+        },
+    )
+
+@router.get("/org/dashboard", response_class=HTMLResponse)
+async def org_dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return templates.TemplateResponse(
+            "not_found.html",
+            {
+                "request": request,
+                "page_title": "Organization Not Found | MM",
+                "current_user": current_user,
+                "message": "No organization is assigned to this user yet.",
+            },
+            status_code=404,
+        )
+
+    org_users = get_org_users(db, organization.id)
+    org_courses = get_org_courses(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_dashboard.html",
+        {
+            "request": request,
+            "page_title": f"{organization.name} | Organization Dashboard",
+            "current_user": current_user,
+            "organization": organization,
+            "org_users": org_users,
+            "org_courses": org_courses,
+        },
+    )
+
+
+@router.get("/org/users", response_class=HTMLResponse)
+async def org_users_view(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    org_users = get_org_users(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_users.html",
+        {
+            "request": request,
+            "page_title": "Organization Users | MM",
+            "current_user": current_user,
+            "organization": organization,
+            "org_users": org_users,
+        },
+    )
+
+
+@router.get("/org/courses", response_class=HTMLResponse)
+async def org_courses_view(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    current_user = get_current_user(request, db)
+    if not current_user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    organization = get_user_organization(db, current_user)
+    if not organization:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    org_courses = get_org_courses(db, organization.id)
+
+    return templates.TemplateResponse(
+        "org_courses.html",
+        {
+            "request": request,
+            "page_title": "Organization Courses | MM",
+            "current_user": current_user,
+            "organization": organization,
+            "org_courses": org_courses,
         },
     )

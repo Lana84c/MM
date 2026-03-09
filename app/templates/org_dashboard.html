@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Organization</p>
+        <h1>{{ organization.name }}</h1>
+        <p class="lead">Organization overview for learners and courses.</p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Total Users</h3>
+                <p>{{ org_users|length }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Total Courses</h3>
+                <p>{{ org_courses|length }}</p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a class="button primary" href="/org/users">View Users</a>
+            <a class="button secondary" href="/org/courses">View Courses</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

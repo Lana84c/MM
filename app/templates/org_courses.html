@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Organization Courses</p>
+        <h1>{{ organization.name }}</h1>
+        <p class="lead">Courses assigned to this organization.</p>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="info-grid">
+        {% for course in org_courses %}
+        <div class="info-card">
+            <h3>{{ course.title }}</h3>
+            <p>{{ course.description }}</p>
+            <p><strong>Difficulty:</strong> {{ course.difficulty|title }}</p>
+            <p><strong>Published:</strong> {{ "Yes" if course.published else "No" }}</p>
+        </div>
+        {% else %}
+        <div class="info-card">
+            <h3>No courses found</h3>
+            <p>No courses are assigned to this organization yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="actions" style="margin-top: 1rem;">
+        <a class="button secondary" href="/org/dashboard">Back to Org Dashboard</a>
+    </div>
+</section>
+{% endblock %}
