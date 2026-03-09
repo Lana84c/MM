@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Course</p>
+        <h1>{{ course.title }}</h1>
+        <p class="lead">{{ course.description }}</p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Difficulty</h3>
+                <p>{{ course.difficulty|title }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Lessons</h3>
+                <p>{{ lessons|length }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Progress</h3>
+                <p>{{ progress_percent }}%</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ progress_percent }}%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            {% if current_user and not enrolled %}
+                <form method="post" action="/courses/{{ course.id }}/enroll">
+                    <button type="submit" class="button primary">Enroll in Course</button>
+                </form>
+            {% elif not current_user %}
+                <a class="button primary" href="/login">Login to Enroll</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Lessons</p>
+        <h2>Course content</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for lesson in lessons %}
+            <div class="info-card">
+                <h3>{{ lesson.sort_order }}. {{ lesson.title }}</h3>
+
+                {% if lesson.id in completed_lesson_ids %}
+                    <p class="status-complete">Completed</p>
+                {% endif %}
+
+                <a class="button primary" href="/lessons/{{ lesson.slug }}">Open Lesson</a>
+            </div>
+        {% else %}
+            <div class="info-card">
+                <h3>No lessons yet</h3>
+                <p>This course does not have lessons yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

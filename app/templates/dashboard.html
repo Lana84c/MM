@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Dashboard</p>
+        <h1>Welcome, {{ current_user.full_name }}</h1>
+        <p class="lead">
+            You are logged in as <strong>{{ current_user.role }}</strong>.
+        </p>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Account Email</h3>
+                <p>{{ current_user.email }}</p>
+            </div>
+
+            <div class="info-card">
+                <h3>Learning Path</h3>
+                <p>Your enrolled courses and progress appear below.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Your Courses</p>
+        <h2>Track your progress</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for card in course_cards %}
+            <div class="info-card">
+                <h3>{{ card.course.title }}</h3>
+                <p>{{ card.course.description }}</p>
+                <p><strong>Lessons:</strong> {{ card.lesson_count }}</p>
+                <p><strong>Progress:</strong> {{ card.progress_percent }}%</p>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ card.progress_percent }}%;"></div>
+                </div>
+
+                <div class="card-actions">
+                    <a class="button primary" href="/courses/{{ card.course.slug }}">Open Course</a>
+                </div>
+            </div>
+        {% else %}
+            <div class="info-card">
+                <h3>No enrolled courses yet</h3>
+                <p>Visit the home page and enroll in a course to get started.</p>
+                <a class="button primary" href="/">Browse Courses</a>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

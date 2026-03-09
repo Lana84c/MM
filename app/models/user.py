@@ -15,3 +15,4 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="learner")
 
     organization = relationship("Organization")
+    enrollments = relationship("Enrollment", back_populates="user", cascade="all, delete-orphan")

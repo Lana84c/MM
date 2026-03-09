@@ -11,8 +11,46 @@
         </p>
 
         <div class="actions">
-            <a class="button primary" href="/health">Check App Health</a>
+            {% if current_user %}
+                <a class="button primary" href="/dashboard">Go to Dashboard</a>
+            {% else %}
+                <a class="button primary" href="/login">Login</a>
+            {% endif %}
         </div>
+    </div>
+</section>
+
+<section class="catalog">
+    <div class="section-heading">
+        <p class="eyebrow">Course Catalog</p>
+        <h2>Start learning practical modern manners</h2>
+    </div>
+
+    <div class="info-grid">
+        {% for course in courses %}
+            <div class="info-card">
+                <h3>{{ course.title }}</h3>
+                <p><strong>Level:</strong> {{ course.difficulty|title }}</p>
+                <p>{{ course.description }}</p>
+
+                <div class="card-actions">
+                    <a class="button secondary" href="/courses/{{ course.slug }}">View Course</a>
+
+                    {% if current_user %}
+                        <form method="post" action="/courses/{{ course.id }}/enroll" class="inline-form">
+                            <button type="submit" class="button primary">Enroll</button>
+                        </form>
+                    {% else %}
+                        <a class="button primary" href="/login">Login to Enroll</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="info-card">
+                <h3>No courses yet</h3>
+                <p>Add seed data to populate the LMS catalog.</p>
+            </div>
+        {% endfor %}
     </div>
 </section>
 {% endblock %}

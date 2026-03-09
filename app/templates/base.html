@@ -12,6 +12,12 @@
             <div class="brand">MM</div>
             <nav class="nav">
                 <a href="/">Home</a>
+                {% if current_user %}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/logout">Logout</a>
+                {% else %}
+                    <a href="/login">Login</a>
+                {% endif %}
                 <a href="/health">Health</a>
             </nav>
         </div>

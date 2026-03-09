@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     secret_key: str = "change-me-in-production"
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/mm_db"
+    session_cookie_name: str = "mm_session"
 
     model_config = SettingsConfigDict(
         env_file=".env",

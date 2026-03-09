@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-card">
+        <p class="eyebrow">Lesson</p>
+        <h1>{{ lesson.title }}</h1>
+        <p class="lead">{{ lesson.content }}</p>
+
+        <div class="actions">
+            <a class="button secondary" href="/courses/{{ course.slug }}">Back to Course</a>
+
+            {% if current_user and enrolled and not completed %}
+                <form method="post" action="/lessons/{{ lesson.slug }}/complete" class="inline-form">
+                    <button type="submit" class="button primary">Mark Lesson Complete</button>
+                </form>
+            {% elif current_user and enrolled and completed %}
+                <span class="status-complete large">Lesson Complete</span>
+            {% elif not current_user %}
+                <a class="button primary" href="/login">Login</a>
+            {% else %}
+                <span class="note-text">Enroll in the course to track completion.</span>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
